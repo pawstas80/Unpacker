@@ -11,7 +11,9 @@ Download the latest package from [GitHub Releases](https://github.com/pawstas80/
 ## Supported Formats
 
 - `ISSetupStream`
-- InstallShield overlay tables used by some older setup files
+- InstallShield overlay tables:
+  - counted UTF-16 tables
+  - legacy ANSI tables used by older setup files
 
 ## Build
 
