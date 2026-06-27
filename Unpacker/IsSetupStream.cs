@@ -18,6 +18,21 @@ namespace Unpacker
 
         public static bool Unpack(string fileToUnpack, string directoryOutput = null)
         {
+            return Run(fileToUnpack, directoryOutput, IsSetupStreamOperation.Extract);
+        }
+
+        public static bool List(string fileToUnpack)
+        {
+            return Run(fileToUnpack, null, IsSetupStreamOperation.List);
+        }
+
+        public static bool Test(string fileToUnpack)
+        {
+            return Run(fileToUnpack, null, IsSetupStreamOperation.Test);
+        }
+
+        private static bool Run(string fileToUnpack, string directoryOutput, IsSetupStreamOperation operation)
+        {
             if (string.IsNullOrWhiteSpace(directoryOutput))
             {
                 directoryOutput = OutputPath.GetDefaultDirectory(fileToUnpack);
@@ -43,20 +58,21 @@ namespace Unpacker
                     Message?.Invoke("Detected: ISSetupStream");
                     Message?.Invoke($"Overlay start: 0x{overlayPositionStart:X8}");
 
-                    WriteEmbeddedSetup(br, overlayPositionStart, directoryOutput);
-
                     br.BaseStream.Position = overlayPositionStart + Signature.Length + 1;
                     var numFiles = br.ReadUInt16();
-                    Message?.Invoke($"Files: {numFiles}");
+                    Message?.Invoke($"Files: {numFiles + 1}");
 
                     var formatVersion = br.ReadUInt32();
                     br.ReadBytesRequired(8);
                     br.ReadUInt16();
                     br.ReadBytesRequired(16);
 
+                    ProcessEmbeddedSetup(br, overlayPositionStart, directoryOutput, operation);
+
                     for (var i = 0; i < numFiles; i += 1)
                     {
-                        ExtractEntry(br, directoryOutput, formatVersion);
+                        var entry = ReadEntry(br, formatVersion);
+                        ProcessEntry(entry, directoryOutput, operation);
                     }
 
                     return true;
@@ -64,7 +80,7 @@ namespace Unpacker
             }
             catch (Exception ex)
             {
-                Message?.Invoke($"ISSetupStream extraction failed: {ex.Message}");
+                Message?.Invoke($"ISSetupStream operation failed: {ex.Message}");
                 return false;
             }
         }
@@ -80,17 +96,42 @@ namespace Unpacker
             return br.ReadByte() == 0;
         }
 
-        private static void WriteEmbeddedSetup(BinaryReader br, long overlayPositionStart, string directoryOutput)
+        private static void ProcessEmbeddedSetup(
+            BinaryReader br,
+            long overlayPositionStart,
+            string directoryOutput,
+            IsSetupStreamOperation operation)
         {
             var setupSize = checked((int)overlayPositionStart);
+            if (operation == IsSetupStreamOperation.List)
+            {
+                Message?.Invoke($"{setupSize,12}  Setup.exe");
+                return;
+            }
+
+            if (operation == IsSetupStreamOperation.Test)
+            {
+                Message?.Invoke("Testing: Setup.exe");
+                return;
+            }
+
+            Message?.Invoke("Extracting: Setup.exe");
             var setupPath = OutputPath.GetSafeFilePath(directoryOutput, "Setup.exe");
             OutputPath.EnsureParentDirectory(setupPath);
 
-            br.BaseStream.Position = 0;
-            File.WriteAllBytes(setupPath, br.ReadBytesRequired(setupSize));
+            var previousPosition = br.BaseStream.Position;
+            try
+            {
+                br.BaseStream.Position = 0;
+                File.WriteAllBytes(setupPath, br.ReadBytesRequired(setupSize));
+            }
+            finally
+            {
+                br.BaseStream.Position = previousPosition;
+            }
         }
 
-        private static void ExtractEntry(BinaryReader br, string directoryOutput, uint formatVersion)
+        private static IsSetupStreamEntry ReadEntry(BinaryReader br, uint formatVersion)
         {
             var nameLength = br.ReadInt32();
             if (nameLength <= 0)
@@ -111,19 +152,56 @@ namespace Unpacker
             var fileName = Encoding.Unicode.GetString(br.ReadBytesRequired(nameLength)).TrimEnd('\0');
             var encryptedData = br.ReadBytesRequired(fileLength);
 
-            Message?.Invoke($"Extracting: {fileName}");
-
-            var key = BuildKey(Encoding.UTF8.GetBytes(fileName));
-            var fileData = DecryptPayload(encryptedData, encryptionFlags, key);
-            if (isCompressed)
+            if (string.IsNullOrWhiteSpace(fileName))
             {
-                fileData = fileData.UnZlib();
+                throw new InvalidDataException("ISSetupStream entry has an empty file name.");
             }
 
-            var outputPath = OutputPath.GetSafeFilePath(directoryOutput, fileName);
+            return new IsSetupStreamEntry
+            {
+                FileName = fileName,
+                FileLength = fileLength,
+                EncryptionFlags = encryptionFlags,
+                IsCompressed = isCompressed,
+                WriteTime = writeTime,
+                CreationTime = creationTime,
+                AccessTime = accessTime,
+                EncryptedData = encryptedData
+            };
+        }
+
+        private static void ProcessEntry(IsSetupStreamEntry entry, string directoryOutput, IsSetupStreamOperation operation)
+        {
+            if (operation == IsSetupStreamOperation.List)
+            {
+                Message?.Invoke($"{entry.FileLength,12}  {entry.FileName}");
+                return;
+            }
+
+            if (operation == IsSetupStreamOperation.Test)
+            {
+                Message?.Invoke($"Testing: {entry.FileName}");
+                DecodeEntry(entry);
+                return;
+            }
+
+            Message?.Invoke($"Extracting: {entry.FileName}");
+            var fileData = DecodeEntry(entry);
+            var outputPath = OutputPath.GetSafeFilePath(directoryOutput, entry.FileName);
             OutputPath.EnsureParentDirectory(outputPath);
             File.WriteAllBytes(outputPath, fileData.ToArray());
-            NativeMethods.TrySetAllFileTimesUtc(outputPath, creationTime, accessTime, writeTime);
+            NativeMethods.TrySetAllFileTimesUtc(
+                outputPath,
+                entry.CreationTime,
+                entry.AccessTime,
+                entry.WriteTime);
+        }
+
+        private static List<byte> DecodeEntry(IsSetupStreamEntry entry)
+        {
+            var key = BuildKey(Encoding.UTF8.GetBytes(entry.FileName));
+            var fileData = DecryptPayload(entry.EncryptedData, entry.EncryptionFlags, key);
+            return entry.IsCompressed ? fileData.UnZlib() : fileData;
         }
 
         private static DateTime ReadFileTime(BinaryReader br, uint formatVersion)
@@ -183,6 +261,32 @@ namespace Unpacker
             }
 
             return buffer;
+        }
+
+        private enum IsSetupStreamOperation
+        {
+            Extract,
+            List,
+            Test
+        }
+
+        private sealed class IsSetupStreamEntry
+        {
+            public string FileName { get; set; }
+
+            public int FileLength { get; set; }
+
+            public int EncryptionFlags { get; set; }
+
+            public bool IsCompressed { get; set; }
+
+            public DateTime WriteTime { get; set; }
+
+            public DateTime CreationTime { get; set; }
+
+            public DateTime AccessTime { get; set; }
+
+            public byte[] EncryptedData { get; set; }
         }
     }
 }

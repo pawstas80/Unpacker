@@ -31,6 +31,18 @@ The `ISSetupStream` extraction logic is based on the MIT-licensed extractor cred
 - InstallShield ISSetupStream extractor, copyright (c) 2019 Mantas Mikulenas
 - Based on code from https://github.com/lifenjoiner/ISx, copyright (c) 2017 lifenjoiner
 
+The encrypted InstallShield archive parser and M1024/zlib decoding logic are also based on:
+
+- ISx, https://github.com/lifenjoiner/ISx, copyright (c) 2017 lifenjoiner
+
+License: MIT
+
+## Unshield Parser Logic
+
+The InstallShield Cabinet `.hdr` / `.cab` parser is a C# port of extraction logic from:
+
+- Unshield, https://github.com/twogood/unshield, copyright (c) 2003 David Eriksson
+
 License: MIT
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files

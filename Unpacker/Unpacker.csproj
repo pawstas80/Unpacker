@@ -26,13 +26,14 @@
     <Prefer32Bit>false</Prefer32Bit>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
-    <PlatformTarget>AnyCPU</PlatformTarget>
+    <PlatformTarget>x64</PlatformTarget>
     <DebugType>pdbonly</DebugType>
     <Optimize>true</Optimize>
     <OutputPath>bin\Release\</OutputPath>
     <DefineConstants>TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
+    <Prefer32Bit>false</Prefer32Bit>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="System" />
@@ -46,6 +47,8 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="BinaryReaderExtensions.cs" />
+    <Compile Include="CabinetPackage.cs" />
+    <Compile Include="CommandOptions.cs" />
     <Compile Include="CompressionExtensions.cs" />
     <Compile Include="ICSharpCode.SharpZipLib\BZip2\BZip2.cs" />
     <Compile Include="ICSharpCode.SharpZipLib\BZip2\BZip2Constants.cs" />
@@ -121,12 +124,15 @@
     <Compile Include="ICSharpCode.SharpZipLib\Zip\ZipOutputStream.cs" />
     <Compile Include="ICSharpCode.SharpZipLib\Zip\ZipStrings.cs" />
     <Compile Include="InstallShield.cs" />
+    <Compile Include="InstallShieldCabinetPackage.cs" />
     <Compile Include="IsSetupStream.cs" />
+    <Compile Include="MsiPackage.cs" />
     <Compile Include="NativeMethods.cs" />
     <Compile Include="OutputPath.cs" />
     <Compile Include="PeHeaderReader.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="RunLogger.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />

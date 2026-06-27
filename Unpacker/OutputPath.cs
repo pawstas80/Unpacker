@@ -8,6 +8,13 @@ namespace Unpacker
     {
         private static readonly char[] DirectorySeparators = { '\\', '/' };
         private static readonly char[] InvalidFileNameChars = Path.GetInvalidFileNameChars();
+        private static readonly string[] ReservedDeviceNames =
+        {
+            "CON", "PRN", "AUX", "NUL",
+            "COM1", "COM2", "COM3", "COM4", "COM5", "COM6", "COM7", "COM8", "COM9",
+            "LPT1", "LPT2", "LPT3", "LPT4", "LPT5", "LPT6", "LPT7", "LPT8", "LPT9"
+        };
+        private const int MaxSegmentLength = 120;
 
         public static string GetDefaultDirectory(string inputFile)
         {
@@ -88,7 +95,24 @@ namespace Unpacker
                 }
             }
 
-            return new string(chars);
+            var sanitized = new string(chars).TrimEnd(' ', '.');
+            if (string.IsNullOrWhiteSpace(sanitized))
+            {
+                sanitized = "_";
+            }
+
+            var deviceName = sanitized.Split('.')[0];
+            if (Array.Exists(ReservedDeviceNames, name => string.Equals(name, deviceName, StringComparison.OrdinalIgnoreCase)))
+            {
+                sanitized = "_" + sanitized;
+            }
+
+            if (sanitized.Length > MaxSegmentLength)
+            {
+                sanitized = sanitized.Substring(0, MaxSegmentLength).TrimEnd(' ', '.');
+            }
+
+            return string.IsNullOrWhiteSpace(sanitized) ? "_" : sanitized;
         }
 
         private static string EnsureTrailingSeparator(string path)

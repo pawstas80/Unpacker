@@ -2,6 +2,15 @@
 
 All notable changes to this project are documented here.
 
+## 1.1.0 - 2026-06-27
+
+- Added Microsoft Cabinet `.cab` extraction through `cabinet.dll`.
+- Added InstallShield Cabinet `.hdr` / `data*.cab` extraction.
+- Added `--list`, `--test`, `--quiet`, `--verbose`, `--log`, and `--recursive`.
+- Extended `--list` and `--test` to MSI, `ISSetupStream`, and InstallShield overlay payloads.
+- Added recursive extraction for supported nested packages.
+- Added detailed extraction logs.
+
 ## 1.0.0 - 2026-06-23
 
 - Added command-line help and version output.
