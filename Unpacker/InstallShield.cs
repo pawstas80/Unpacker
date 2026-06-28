@@ -159,11 +159,8 @@ namespace Unpacker
                         ReadNullTerminatedUtf16String));
                 }
 
-                if (!IsAtEndOrPadding(br))
-                {
-                    throw new InvalidDataException($"Unexpected data after the last UTF-16 entry at offset 0x{br.BaseStream.Position:X}.");
-                }
-
+                // Some InstallShield stubs append another payload after this table.
+                // Only the declared entries belong to the UTF-16 overlay table.
                 error = null;
                 return true;
             }

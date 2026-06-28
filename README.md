@@ -2,7 +2,7 @@
 
 Unpacker is a small Windows command-line tool for extracting files from supported installer packages.
 
-Current version: `1.1.0`
+Current version: `1.1.1`
 
 ## Download
 
@@ -35,7 +35,7 @@ dotnet build .\Unpacker.sln -c Release
 .\scripts\build-release.ps1
 ```
 
-The script creates `artifacts\Unpacker-v1.1.0-win-x64.zip` with the exe and project documents.
+The script creates `artifacts\Unpacker-v1.1.1-win-x64.zip` with the exe and project documents.
 
 ## Usage
 

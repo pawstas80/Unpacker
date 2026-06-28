@@ -2,6 +2,10 @@
 
 All notable changes to this project are documented here.
 
+## 1.1.1 - 2026-06-28
+
+- Fixed InstallShield UTF-16 setup files that append extra data after the file table.
+
 ## 1.1.0 - 2026-06-27
 
 - Added Microsoft Cabinet `.cab` extraction through `cabinet.dll`.
